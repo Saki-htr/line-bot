@@ -62,9 +62,9 @@ class LineBotController < ApplicationController
     data = URI.decode_www_form(event['postback']['data']).to_h
     response_message = case data['attendance']
                       when 'yes'
-                        'ご参加ありがとうございます！'
+                        '分かりました。お待ちしています〜。'
                       when 'no'
-                        '承知いたしました。また次回お待ちしています。'
+                        '分かりました。無理しないでくださいね〜'
                       end
     
     client.reply_message(event['replyToken'], {
