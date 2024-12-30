@@ -11,19 +11,28 @@ class LineBotController < ApplicationController
     events = client.parse_events_from(body)
     events.each do |event|
       case event
-      when Line::Bot::Event::Message
-        case event.type
-        when Line::Bot::Event::MessageType::Text
-          if event.message['text'] == "今日はきますか?"
-            client.reply_message(event['replyToken'], attendance_confirm_buttons)
-          end
-        end
       when Line::Bot::Event::Postback
         handle_postback(event)
       end
     end
 
     head :ok
+  end
+
+  def send_attendance_check
+    # memo: 友達全員のユーザーIDを取得できるのは認証済アカウントまたはプレミアムアカウントのみなので、個別に指定する
+    # 参考: https://developers.line.biz/ja/docs/messaging-api/getting-user-ids/#get-all-friends-user-ids
+    user_id = ENV["SAKI_LINE_USER_ID"]
+
+    client.push_message(
+      user_id,
+      attendance_confirm_buttons
+    )
+
+    head :ok
+  rescue Line::Bot::API::Error => e
+    Rails.logger.error "LINE API Error: #{e.message}"
+    head :internal_server_error
   end
 
   private
@@ -60,13 +69,15 @@ class LineBotController < ApplicationController
 
   def handle_postback(event)
     data = URI.decode_www_form(event['postback']['data']).to_h
+    user_id = event['source']['userId']
+
     response_message = case data['attendance']
                       when 'yes'
                         '分かりました。お待ちしています〜。'
                       when 'no'
                         '分かりました。無理しないでくださいね〜'
                       end
-    
+
     client.reply_message(event['replyToken'], {
       type: 'text',
       text: response_message
